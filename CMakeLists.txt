@@ -29,12 +29,12 @@ set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/ext)
 #-------------------
 # Module source
 #-------------------
-set(PROJECT_LIB_NAME ${PROJECT_NAME_STR}_impl)
-
-include_directories(${COMMON_INCLUDES})
-file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/*.cpp)
-add_library(${PROJECT_LIB_NAME} ${SRC_FILES})
-
+#set(PROJECT_LIB_NAME ${PROJECT_NAME_STR}_impl)
+#
+#include_directories(${COMMON_INCLUDES})
+#file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/*.cpp)
+#add_library(${PROJECT_LIB_NAME} ${SRC_FILES})
+#
 add_subdirectory(${EXT_PROJECTS_DIR}/gtest)
 
 #-------------------
@@ -49,7 +49,7 @@ file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*.cpp)
 add_executable(${PROJECT_TEST_NAME} ${TEST_SRC_FILES})
 add_dependencies(${PROJECT_TEST_NAME} googletest)
 
-target_link_libraries(${PROJECT_TEST_NAME} ${PROJECT_LIB_NAME})
+#target_link_libraries(${PROJECT_TEST_NAME} ${PROJECT_LIB_NAME})
 
 target_link_libraries(${PROJECT_TEST_NAME}
         ${GTEST_LIBS_DIR}/libgtest.a
@@ -59,52 +59,3 @@ target_link_libraries(${PROJECT_TEST_NAME}
 target_link_libraries(${PROJECT_TEST_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(RangeTreeTests ${PROJECT_TEST_NAME})
-
-
-
-
-
-
-
-
-
-# Source files and executables
-#set(SOURCE_FILES main.cpp RangeTree.cpp RangeTree.h)
-#add_executable(RangeTree ${SOURCE_FILES})
-
-###
-# Testing
-###
-
-# Options. Turn on with 'cmake -Dmyvarname=ON'.
-#option(test "Build all tests." OFF) # Makes boolean 'test' available.
-#
-#if (test)
-#    # This adds another subdirectory, which has 'project(gtest)'.
-#    add_subdirectory(lib/gtest)
-#
-#    enable_testing()
-#
-#    # Include the gtest library. gtest_SOURCE_DIR is available due to
-#    # 'project(gtest)' above.
-#    include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-#
-#    ##############
-#    # Unit Tests
-#    ##############
-#    add_executable(runUnitTests test_RangeTree.cpp)
-#
-#    # Standard linking to gtest stuff.
-#    target_link_libraries(runUnitTests gtest gtest_main)
-#
-#    # Extra linking for the project.
-#    #target_link_libraries(runUnitTests RangeTree.cpp)
-#
-#    # This is so you can do 'make test' to see all your tests run, instead of
-#    # manually running the executable runUnitTests to see those specific tests.
-#    #add_test(NAME that-test-I-made COMMAND runUnitTests)
-#
-#    # You can also omit NAME and COMMAND. The second argument could be some other
-#    # test executable.
-#    add_test(foo runUnitTests)
-#endif()
