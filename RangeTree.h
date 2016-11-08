@@ -541,6 +541,69 @@ namespace RangeTree {
             return numPointsInRange;
         }
 
+`        /**
+         * Return the points at leaves of tree rooted at the current node that are within the given bounds.
+         *
+         * @param lower see the pointInRange(...) function.
+         * @param upper
+         * @param withLower
+         * @param withUpper
+         * @return a std::vector of the Points.
+         */
+        std::vector<Point<T>> pointsInRange(const std::vector<double>& lower,
+                                            const std::vector<double>& upper,
+                                            const std::vector<bool>& withLower,
+                                            const std::vector<bool>& withUpper) const {
+            std::vector<Point<T>> pointsToReturn = {};
+            if (isLeaf) {
+                if (pointInRange(point, lower, upper, withLower, withUpper)) {
+                    pointsToReturn.push_back(point);
+                }
+                return pointsToReturn;
+            }
+            int compareInd = pointOrdering.getCompareStartIndex();
+
+            if ((point[compareInd] > upper[compareInd]) ||
+                (point[compareInd] == upper[compareInd] && !withUpper[compareInd])) {
+                return (*left).pointsInRange(lower, upper, withLower, withUpper);
+            }
+            if ((point[compareInd] < lower[compareInd]) ||
+                (point[compareInd] == lower[compareInd] && !withLower[compareInd])) {
+                return (*right).pointsInRange(lower, upper, withLower, withUpper);
+            }
+
+            std::vector<std::shared_ptr<RangeTreeNode<T>>> canonicalNodes = {};
+
+            if ((*left).isLeaf) {
+                canonicalNodes.push_back(left);
+            } else {
+                (*left).leftCanonicalNodes(lower, withLower, canonicalNodes);
+            }
+
+            if ((*right).isLeaf) {
+                canonicalNodes.push_back(right);
+            } else {
+                (*right).rightCanonicalNodes(upper, withUpper, canonicalNodes);
+            }
+
+            for (int i = 0; i < canonicalNodes.size(); i++) {
+                std::shared_ptr<RangeTreeNode<T>> node = canonicalNodes[i];
+                if ((*node).isLeaf) {
+                    if (pointInRange((*node).point, lower, upper, withLower, withUpper)) {
+                        pointsToReturn.push_back(node->point);
+                    }
+                } else if (compareInd + 1 == point.dim()) {
+                    auto allPointsAtNode = node->allPoints;
+                    pointsToReturn.insert(pointsToReturn.end(), allPointsAtNode.begin(), allPointsAtNode.end());
+                } else {
+                    auto allPointsAtNode = node->treeOnNextDim->pointsInRange(lower, upper, withLower, withUpper);
+                    pointsToReturn.insert(pointsToReturn.end(), allPointsAtNode.begin(), allPointsAtNode.end());
+                }
+            }
+
+            return pointsToReturn;
+        }
+
         /**
          * Helper function for countInRange(...).
          * @param lower
@@ -657,7 +720,7 @@ namespace RangeTree {
          *
          * @param points the points from which to create a RangeTree
          */
-        RangeTree(std::vector<Point<T>> points) {
+        RangeTree(const std::vector<Point<T>>& points) {
             if (points.size() != 0) {
                 int dim = points[0].dim();
                 for (int i = 1; i < points.size(); i++) {
@@ -690,11 +753,37 @@ namespace RangeTree {
         int countInRange(const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<bool>& withLower,
-                         const std::vector<bool>& withUpper) {
+                         const std::vector<bool>& withUpper) const {
             return (*root).countInRange(lower, upper, withLower, withUpper);
         }
 
-        void print() {
+        /**
+         * Return all points in range.
+         *
+         * Returns a std::vector of all points in the given rectangle. See \countInRange for how
+         * this rectangle is specified. NOTE: these points may not be identical to those points
+         * that were given as input to the RangeTree at construction time. This is because
+         * duplicate points are merged together with appropriate incrementing of their multiplicity.
+         * That is, two points at euclidean position (1,2,3) and multiplicities/counts of 2 and 3
+         * respectively will be merged into a single Point with position (1,2,3) and multiplicity 5
+         * (recall that all points with the same euclidean position are required to have the same
+         * associated value so it is ok to merge in this way).
+         *
+         * @param lower the lower bounds of the rectangle.
+         * @param upper the upper bounds of the rectangle.
+         * @param withLower whether to use strict (<) or not strict (<=) inequalities at certain coordiantes of p_1
+         *                  for the lower bounds.
+         * @param withUpper as for \withLower but for the upper bounds.
+         * @return the number of points in the rectangle.
+         */
+        std::vector<Point<T>> pointsInRange(const std::vector<double>& lower,
+                                            const std::vector<double>& upper,
+                                            const std::vector<bool>& withLower,
+                                            const std::vector<bool>& withUpper) const {
+            return (*root).pointsInRange(lower, upper, withLower, withUpper);
+        }
+
+        void print() const {
             root->print(0);
         }
     };
@@ -732,7 +821,7 @@ namespace RangeTree {
         int countInRange(const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<bool>& withLower,
-                         const std::vector<bool>& withUpper) {
+                         const std::vector<bool>& withUpper) const {
             int count = 0;
             for (int i = 0; i < points.size(); i++) {
                 if (pointInRange(points[i], lower, upper, withLower, withUpper)) {
@@ -740,6 +829,19 @@ namespace RangeTree {
                 }
             }
             return count;
+        }
+
+        std::vector<Point<T>> pointsInRange(const std::vector<double>& lower,
+                                            const std::vector<double>& upper,
+                                            const std::vector<bool>& withLower,
+                                            const std::vector<bool>& withUpper) const {
+            std::vector<Point<T>> selectedPoints = {};
+            for (int i = 0; i < points.size(); i++) {
+                if (pointInRange(points[i], lower, upper, withLower, withUpper)) {
+                    selectedPoints.push_back(points[i]);
+                }
+            }
+            return selectedPoints;
         }
     };
 
