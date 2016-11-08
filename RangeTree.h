@@ -1,4 +1,4 @@
-/***
+/*
  * MIT License
  *
  * Copyright (c) 2016 Luca Weihs
@@ -22,8 +22,19 @@
  * SOFTWARE.
  */
 
-#ifndef RANGETREE_RANGETREE_H
-#define RANGETREE_RANGETREE_H
+/**
+ * Implements the RangeTree datastructure.
+ *
+ * See the documentation of the class RangeTree for more details regarding the purpose
+ * of RangeTree's.
+ *
+ * This file contains two main abstractions meant for use:
+ * 1. The RangeTree class.
+ * 2. A Point class which captures the idea of a d-dimensional euclidean point.
+ */
+
+#ifndef RANGETREE_H
+#define RANGETREE_H
 
 #include <vector>
 #include <iostream>
@@ -32,9 +43,13 @@
 namespace RangeTree {
 
     /**
-     * A class that represents a multi-dimensional point
-     * with some value. This point can have a multiplicity
-     * represented by its count.
+     * A point in euclidean space.
+     *
+     * A class that represents a multi-dimensional euclidean point
+     * with some associated value. We allow for each point to have an
+     * associated value so that some more information can be stored with
+     * each point. Points can also have a multiplicity/count, this corresponds
+     * to having several duplicates of the same point.
      */
     template<class T>
     class Point {
@@ -44,22 +59,58 @@ namespace RangeTree {
         int multiplicity;
 
     public:
+        /**
+         * Constructs an empty point.
+         *
+         * Creates a point in 0 dimensional euclidean space. This constructor
+         * is provided only to make certain edge cases easier to handle.
+         */
         Point() : multiplicity(0) {}
 
+        /**
+         * Constructs a point.
+         *
+         * Creates a point with its position in euclidean space defined by vec,
+         * value defined by val, and a multiplicity/count of 1.
+         *
+         * @param vec the position in euclidean space.
+         * @param val the value associated with the point.
+         */
         Point(std::vector<double> vec, T val): val(val), vec(vec), multiplicity(1) {}
 
+        /**
+         * Euclidean position of the point.
+         *
+         * @return the euclidean position of the point as a std::vector.
+         */
         std::vector<double> asVector() const {
             return vec;
         }
 
+        /**
+         * The point's ambient dimension.
+         *
+         * @return the dimension of the space in which the point lives. I.e. a point of the
+         *         form (1,2,3) lives in dimension 3.
+         */
         unsigned long dim() const {
             return vec.size();
         }
 
+        /**
+         * The point's count/multiplicity.
+         *
+         * @return returns the count/multiplicity.
+         */
         int count() const {
             return multiplicity;
         }
 
+        /**
+         * Increase the point's count/multiplicity.
+         *
+         * @param n amount to increase by.
+         */
         void increaseCountBy(int n) {
             if (n < 0) {
                 throw std::logic_error("Can't increase by a negative amount");
@@ -67,10 +118,24 @@ namespace RangeTree {
             multiplicity += n;
         }
 
+        /**
+         * The point's value.
+         *
+         * @return the value stored in the point.
+         */
         T value() const {
             return val;
         }
 
+        /**
+         * Index a point.
+         *
+         * Get the ith coordinate value of the point. I.e. if a point is of the form (4,5,6),
+         * then its 0th coordinate value is 4 while its 2nd is 6.
+         *
+         * @param index the coordinate to index.
+         * @return the coordinate value.
+         */
         double operator[](int index) const {
             if(index < 0 || index >= dim()) {
                 throw std::out_of_range("[] access index for point is out of range.");
@@ -78,14 +143,41 @@ namespace RangeTree {
             return vec[index];
         }
 
+        /**
+         * Check for equality.
+         *
+         * Two points are considered equal if they are in the same spot, have the same
+         * multiplicity/count, and store the same value.
+         *
+         * @param p some other point
+         * @return true if \p equals the current point, otherwise false.
+         */
         double operator==(Point<T> p) const {
             return vec == p.vec && multiplicity == p.multiplicity && val == p.val;
         }
 
+        /**
+         * Check for inequality.
+         *
+         * The opposite of ==.
+         *
+         * @param p some other point.
+         * @return false if \p equals the current point, otherwise true.
+         */
         double operator!=(Point<T> p) const {
             return !((*this) == p);
         }
 
+        /**
+         * Prints the point to standard out.
+         *
+         * As an example, a point with euclidean location (3,4,5) and with a
+         * multiplicity/count of 4 will be printed as
+         *
+         * (3, 4, 5) : 4
+         *
+         * @param withCount whether or not to display the points count/multiplicity.
+         */
         void print(bool withCount=true) const {
             std::cout << "(";
             for (int i = 0; i < dim() - 1; i++) {
@@ -99,6 +191,23 @@ namespace RangeTree {
         }
     };
 
+    /**
+     * A class that totally orders Point<T>'s in euclidean space.
+     *
+     * A total order of Points is required in the RangeTree. This is an implementation
+     * detail that can be ignored. Given a start index \compareStartIndex, this class
+     * orders points so that, for two points p_1 = (p_{11}, p_{12},...,p_{1n}) and
+     * p_2 = (p_{21}, p_{22},...,p_{2n}) we have that p_1 < p_2 if and only if
+     *
+     * (p_{1\compareStartInd},...,p_{1n}) < (p_{2\compareStartInd},...,p_{2n})
+     *
+     * using the usual lexicographic order, or
+     *
+     * (p_{1\compareStartInd},...,p_{1n}) == (p_{2\compareStartInd},...,p_{2n}) and
+     * (p_{11},...,p_{1(\compareStartInd-1)}) < (p_{21},...,p_{2(\compareStartInd-1)})
+     *
+     * again using the usual lexicographic order.
+     */
     template <class T>
     class PointOrdering {
     private:
@@ -160,21 +269,50 @@ namespace RangeTree {
         }
     };
 
+    /**
+     * A class representing a single node in a RangeTree. These should not be
+     * constructed directly, instead use the RangeTree class.
+     */
     template <class T>
     class RangeTreeNode {
     private:
-        std::shared_ptr<RangeTreeNode<T>> left;
-        std::shared_ptr<RangeTreeNode<T>> right;
-        std::shared_ptr<RangeTreeNode<T>> treeOnNextDim;
-        Point<T> point;
-        std::vector<Point<T>> allPoints;
-        bool isLeaf;
-        int pointCountSum;
-        PointOrdering<T> pointOrdering;
+        std::shared_ptr<RangeTreeNode<T>> left; /**< Contains points <= the comparison point **/
+        std::shared_ptr<RangeTreeNode<T>> right; /**< Contains points > the comparison point **/
+        std::shared_ptr<RangeTreeNode<T>> treeOnNextDim; /**< Tree on the next dimension **/
+        Point<T> point; /**< The comparison point **/
+        std::vector<Point<T>> allPoints; /**< All points at leaves of the current node **/
+        bool isLeaf; /**< Whether or not the point is a leaf **/
+        int pointCountSum; /**< Total number of points, counting multiplicities, at leaves of the tree **/
+        PointOrdering<T> pointOrdering; /**< Helper to totally order input points **/
 
+        /**
+         * Create a range tree structure from input points.
+         *
+         * Let P = {p_1,...,p_n} be a collection of Point<T>'s that have be sorted according to the
+         * lexicographic order defined by \compareStartInd (see PointOrdering) and which contain no duplicates
+         * (i.e. p_i is strictly less than p_{i+1} for all i). Then creates a range tree structure on the points
+         * p_{first} to p_{last} given the lexicographic order (when appropriate, sub range tree structures are
+         * created using a lexicographic order defined by \compareStartInd + 1).
+         *
+         * @param sortedUniquePoints a std::vector of Point<T>s sorted according to the lexicographic order defined
+         *                           above (these points must be unique with respect to that order).
+         * @param first an int defining the first point to use from the input collection.
+         * @param last an int defining the last point to use from the input collection.
+         * @param compareStartInd an int defining the PointOrdering lexicographic order.
+         * @return a RangeTreeNode representing the root of a new range tree structure.
+         */
         std::shared_ptr<RangeTreeNode<T>> sortedPointsToBinaryTree(std::vector<Point<T>> sortedUniquePoints,
                                                                    int first, int last, int compareStartInd) {
-            if (first == last) {
+            if (sortedUniquePoints.size() == 0) {
+                throw std::logic_error("Number of points input to sortedPointsToBinaryTree must be >0.");
+            }
+
+            if (first > last || first < 0 || last >= sortedUniquePoints.size()) {
+                std::ostringstream out;
+                out << "Must have 0 <= first (" << first << ")  <= last (" << last << "), and "
+                        "last < the number of input points (" << sortedUniquePoints.size() << ").";
+                throw std::logic_error(out.str());
+            } else if (first == last) {
                 return std::shared_ptr<RangeTreeNode<T>>(
                         new RangeTreeNode(sortedUniquePoints[first], compareStartInd));
             } else {
@@ -196,6 +334,16 @@ namespace RangeTree {
         }
 
     public:
+        /**
+         * Construct a range tree structure from points.
+         *
+         * Creates a range tree structure on the input collection \allPoints using the lexicographic order
+         * starting at \compareStartInd.
+         *
+         * @param allPoints a collection of points.
+         * @param compareStartInd the index to use for the lexicographic order
+         * @return a range tree structure
+         */
         RangeTreeNode(std::vector<Point<T>> allPoints, int compareStartInd): pointOrdering(compareStartInd) {
             if (allPoints.size() == 0) {
                 throw std::range_error("Range tree requires input vector of points to not be empty.");
@@ -235,33 +383,84 @@ namespace RangeTree {
             }
         }
 
+        /**
+         * Construct a range tree structure
+         *
+         * Creates a range tree structure similarily as for
+         * RangeTreeNode(std::vector<Point<T>> sortedUniquePoints, int compareStartInd) but where the root node's left and
+         * right subtrees are already known.
+         *
+         * @param left std::shared_ptr to left subtree
+         * @param right std::shared_ptr to right subtree
+         * @param sortedUniquePoints collection of sorted unqiue points
+         * @param comparePoint the point at the node to be constructed that is used as the comparison point
+         * @param compareStartInd the index defining the lexicographic order
+         */
         RangeTreeNode(std::shared_ptr<RangeTreeNode<T>> left,
                       std::shared_ptr<RangeTreeNode<T>> right,
-                      std::vector<Point<T>> allPoints,
+                      std::vector<Point<T>> sortedUniquePoints,
                       Point<T> comparePoint,
                       int compareStartInd) :
-                left(left), right(right), allPoints(allPoints),
+                left(left), right(right), allPoints(sortedUniquePoints),
                 point(comparePoint), isLeaf(false),
                 pointOrdering(compareStartInd) {
             if (compareStartInd + 1 != point.dim()) {
-                treeOnNextDim = std::shared_ptr<RangeTreeNode<T>>(new RangeTreeNode<T>(allPoints, compareStartInd + 1));
+                treeOnNextDim = std::shared_ptr<RangeTreeNode<T>>(new RangeTreeNode<T>(sortedUniquePoints,
+                                                                                       compareStartInd + 1));
             }
             pointCountSum = (*left).totalPoints() + (*right).totalPoints();
         }
 
+        /**
+         * Construct a RangeTreeNode representing a leaf.
+         *
+         * @param pointAtLeaf the point to use at the leaf.
+         * @param compareStartInd the index defining the lexicographic ordering.
+         * @return
+         */
         RangeTreeNode(Point<T> pointAtLeaf, int compareStartInd) :
                 point(pointAtLeaf), isLeaf(true), pointCountSum(pointAtLeaf.count()), pointOrdering(compareStartInd) {
             allPoints.push_back(point);
         }
 
+        /**
+         * Total count of points at the leaves of the range tree rooted at this node.
+         *
+         * The total count returned INCLUDES the multiplicities/count of the points at the leaves.
+         *
+         * @return the total count.
+         */
         int totalPoints() const {
             return pointCountSum;
         }
 
+        /**
+         * Return all points at the leaves of the range tree rooted at this node.
+         * @return all the points.
+         */
         std::vector<Point<T>> getAllPoints() const {
             return allPoints;
         }
 
+        /**
+         * Check if point is in a euclidean box.
+         *
+         * Determines whether or not a point is in a euclidean box. That is, if p_1 = (p_{11},...,p_{1n}) is an
+         * n-dimensional point. Then this function returns true if, for all 1 <= i <= n we have
+         *
+         * lower[i] <= p_{1i} <= upper[i] if withLower[i] == true and withUpper[i] == true, or
+         * lower[i] < p_{1i} <= upper[i] if withLower[i] == false and withUpper[i] == true, or
+         * lower[i] <= p_{1i} < upper[i] if withLower[i] == true and withUpper[i] == false, or
+         * lower[i] < p_{1i} < upper[i] if withLower[i] == false and withUpper[i] == false.
+         *
+         * @param point the point to check.
+         * @param lower the lower points of the rectangle.
+         * @param upper the upper bounds of the rectangle.
+         * @param withLower whether to use strict (<) or not strict (<=) inequalities at certain coordiantes of p_1
+         *                  for the lower bounds.
+         * @param withUpper as for \withLower but for the upper bounds.
+         * @return true if the point is in the rectangle, false otherwise.
+         */
         bool pointInRange(const Point<T>& point,
                           const std::vector<double>& lower,
                           const std::vector<double>& upper,
@@ -280,6 +479,15 @@ namespace RangeTree {
             return true;
         }
 
+        /**
+         * Count the number of points at leaves of tree rooted at the current node that are within the given bounds.
+         *
+         * @param lower see the pointInRange(...) function.
+         * @param upper
+         * @param withLower
+         * @param withUpper
+         * @return the count.
+         */
         int countInRange(const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<bool>& withLower,
@@ -333,6 +541,12 @@ namespace RangeTree {
             return numPointsInRange;
         }
 
+        /**
+         * Helper function for countInRange(...).
+         * @param lower
+         * @param withLower
+         * @param nodes
+         */
         void leftCanonicalNodes(const std::vector<double>& lower,
                                 const std::vector<bool>& withLower,
                                 std::vector<std::shared_ptr<RangeTreeNode<T>>>& nodes) {
@@ -358,6 +572,12 @@ namespace RangeTree {
             }
         }
 
+        /**
+         * Helper function for countInRange(...).
+         * @param upper
+         * @param withUpper
+         * @param nodes
+         */
         void rightCanonicalNodes(const std::vector<double>& upper,
                                  const std::vector<bool>& withUpper,
                                  std::vector<std::shared_ptr<RangeTreeNode<T>>>& nodes) {
@@ -383,6 +603,13 @@ namespace RangeTree {
             }
         }
 
+        /**
+         * Print the structure of the tree rooted at the curret node.
+         *
+         * The printed structure does not reflect any subtrees for other coordinates.
+         *
+         * @param numIndents the number of indents to use before every line printed.
+         */
         void print(int numIndents) {
             for (int i = 0; i < numIndents; i++) { std::cout << "\t"; }
             if (isLeaf) {
@@ -395,16 +622,71 @@ namespace RangeTree {
         }
     };
 
+    /**
+     * A class facilitating fast orthogonal range queries.
+     *
+     * A RangeTree allows for 'orthogonal range queries.' That is, given a collection of
+     * points P = {p_1, ..., p_n} in euclidean d-dimensional space, a RangeTree can efficiently
+     * answer questions of the form
+     *
+     * "How many points of p are in the box high dimensional rectangle
+     * [l_1, u_1] x [l_2, u_2] x ... x [l_d, u_d]
+     * where l_1 <= u_1, ..., l_n <= u_n?"
+     *
+     * It returns the number of such points in worst case
+     * O(log(n)^d) time. It can also return the points that are in the rectangle in worst case
+     * O(log(n)^d + k) time where k is the number of points that lie in the rectangle.
+     *
+     * The particular algorithm implemented here is described in Chapter 5 of the book
+     *
+     * Mark de Berg, Otfried Cheong, Marc van Kreveld, and Mark Overmars. 2008.
+     * Computational Geometry: Algorithms and Applications (3rd ed. ed.). TELOS, Santa Clara, CA, USA.
+     */
     template <class T>
     class RangeTree {
     private:
         std::shared_ptr<RangeTreeNode<T>> root;
 
     public:
+        /**
+         * Construct a new RangeTree from input points.
+         *
+         * Input points may have duplicates but if two points p_1 and p_2 are at the same euclidean position
+         * then they are required to have the same value as all duplicate points will be accumulated into a
+         * single point with multiplicity/count equal to the sum of the multiplicities/counts of all such duplicates.
+         *
+         * @param points the points from which to create a RangeTree
+         */
         RangeTree(std::vector<Point<T>> points) {
+            if (points.size() != 0) {
+                int dim = points[0].dim();
+                for (int i = 1; i < points.size(); i++) {
+                    if (points[i].dim() != dim) {
+                        throw std::logic_error("Input points to RangeTree must all have the same dimension.");
+                    }
+                }
+            }
             root = std::shared_ptr<RangeTreeNode<T>>(new RangeTreeNode<T>(points, 0));
         }
 
+        /**
+         * The number of points within a high dimensional rectangle.
+         *
+         * The rectangle is defined by the input parameters. In particular, an n-dimensional point
+         * p_1 = (p_{11},...,p_{1n}) is an is in the rectangle if, for all 1 <= i <= n, we have
+         *
+         * lower[i] <= p_{1i} <= upper[i] if withLower[i] == true and withUpper[i] == true, or
+         * lower[i] < p_{1i} <= upper[i] if withLower[i] == false and withUpper[i] == true, or
+         * lower[i] <= p_{1i} < upper[i] if withLower[i] == true and withUpper[i] == false, or
+         * lower[i] < p_{1i} < upper[i] if withLower[i] == false and withUpper[i] == false.
+         *
+         * @param lower the lower bounds of the rectangle.
+         * @param upper the upper bounds of the rectangle.
+         * @param withLower whether to use strict (<) or not strict (<=) inequalities at certain coordiantes of p_1
+         *                  for the lower bounds.
+         * @param withUpper as for \withLower but for the upper bounds.
+         * @return the number of points in the rectangle.
+         */
         int countInRange(const std::vector<double>& lower,
                          const std::vector<double>& upper,
                          const std::vector<bool>& withLower,
@@ -417,6 +699,10 @@ namespace RangeTree {
         }
     };
 
+    /**
+     * A class which is used to naively count the number of points in a given rectangle. This class is used
+     * for testing an benchmarking, it should not be used in practice.
+     */
     template <class T>
     class NaiveRangeCounter {
     private:
@@ -459,4 +745,4 @@ namespace RangeTree {
 
 } // namespace
 
-#endif //RANGETREE_RANGETREE_H
+#endif //RANGETREE_H
