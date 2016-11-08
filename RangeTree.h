@@ -541,7 +541,7 @@ namespace RangeTree {
             return numPointsInRange;
         }
 
-`        /**
+        /**
          * Return the points at leaves of tree rooted at the current node that are within the given bounds.
          *
          * @param lower see the pointInRange(...) function.
