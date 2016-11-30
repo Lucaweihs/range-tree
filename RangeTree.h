@@ -39,7 +39,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
-#include <numeric>
+
 
 namespace RangeTree {
 
@@ -296,6 +296,20 @@ namespace RangeTree {
         int pointCountSum; /**< Total number of points, counting multiplicities, at leaves of the tree **/
         PointOrdering<T> pointOrdering; /**< Helper to totally order input points **/
 
+        static std::vector<Point<T>* > mergePointVectors(const std::vector<Point<T>* >& ptVec0,
+                                                         const std::vector<Point<T>* >& ptVec1,
+                                                         int comparisonDim) {
+            std::vector<Point<T>* > ptSorted;
+            PointOrdering<T> pointOrdering(comparisonDim);
+            std::merge(ptVec0.begin(), ptVec0.end(),
+                       ptVec1.begin(), ptVec1.end(),
+                       std::back_inserter(ptSorted),
+                       [&pointOrdering](const Point<T>* p1, const Point<T>* p2) {
+                           return pointOrdering.less(*p1, *p2);
+                       });
+            return ptSorted;
+        }
+
         /**
          * Create a range tree structure from input points.
          *
@@ -325,7 +339,7 @@ namespace RangeTree {
                         "last < the number of input points (" << sortedUniquePoints.size() << ").";
                 throw std::logic_error(out.str());
             } else if (first == last) {
-                return std::shared_ptr<RangeTreeNode<T>>(
+                return std::shared_ptr<RangeTreeNode<T> >(
                         new RangeTreeNode(sortedUniquePoints[first], compareStartInd));
             } else {
                 int mid = (first + last) / 2;
@@ -337,7 +351,7 @@ namespace RangeTree {
                     subVec.push_back(sortedUniquePoints[i]);
                 }
 
-                return std::shared_ptr<RangeTreeNode<T>>(
+                return std::shared_ptr<RangeTreeNode<T> >(
                         new RangeTreeNode(left, right,
                                           subVec,
                                           sortedUniquePoints[mid],
@@ -361,9 +375,6 @@ namespace RangeTree {
                 throw std::range_error("Range tree requires input vector of points to not be empty.");
             }
 
-//            sort(idx.begin(), idx.end(),
-//             [&points, &pointOrdering](size_t i1, size_t i2) {
-//                 return pointOrdering.less(points[i1], points[i2]); });
 
             std::sort(uniquePoints.begin(), uniquePoints.end(),
                       [this](const Point<T>* p1, const Point<T>* p2) {
@@ -729,7 +740,7 @@ namespace RangeTree {
     template <class T>
     class RangeTree {
     private:
-        std::shared_ptr<RangeTreeNode<T>> root;
+        std::shared_ptr<RangeTreeNode<T> > root;
         std::vector<std::shared_ptr<Point<T> > > sortedUniquePoints;
 
     public:
@@ -742,7 +753,7 @@ namespace RangeTree {
          *
          * @param points the points from which to create a RangeTree
          */
-        RangeTree(const std::vector<Point<T> >& points) {
+        RangeTree(std::vector<Point<T> > points) {
             if (points.size() != 0) {
                 int dim = points[0].dim();
                 for (int i = 1; i < points.size(); i++) {
@@ -773,7 +784,7 @@ namespace RangeTree {
                 sortedUniquePointsRaw.push_back(&(*sortedUniquePoints[i]));
             }
 
-            root = std::shared_ptr<RangeTreeNode<T>>(new RangeTreeNode<T>(sortedUniquePointsRaw, 0));
+            root = std::shared_ptr<RangeTreeNode<T> >(new RangeTreeNode<T>(sortedUniquePointsRaw, 0));
         }
 
         /**
