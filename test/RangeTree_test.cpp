@@ -28,27 +28,27 @@
 
 namespace RT = RangeTree;
 
-template <class T>
-std::vector<RT::Point<T>> slice(std::vector<RT::Point<T>> points, int start, int end) {
-    std::vector<RT::Point<T>> newVec(points.begin() + start, points.begin() + end + 1);
+template <typename T, class S>
+std::vector<RT::Point<T,S>> slice(std::vector<RT::Point<T,S>> points, int start, int end) {
+    std::vector<RT::Point<T,S>> newVec(points.begin() + start, points.begin() + end + 1);
     return newVec;
 }
 
-template <class T>
-std::vector<RT::Point<T>> sortPoints(std::vector<RT::Point<T>> points) {
-    RT::PointOrdering<T> pointOrdering(0);
+template <typename T, class S>
+std::vector<RT::Point<T,S>> sortPoints(std::vector<RT::Point<T,S>> points) {
+    RT::PointOrdering<T,S> pointOrdering(0);
     std::sort(points.begin(), points.end(), pointOrdering);
     return points;
 }
 
-template <class T>
-std::vector<RT::Point<T>> sortAndMerge(std::vector<RT::Point<T>> points) {
+template <typename T, class S>
+std::vector<RT::Point<T,S>> sortAndMerge(std::vector<RT::Point<T,S>> points) {
     if (points.size() == 0) {
         return points;
     }
-    RT::PointOrdering<T> pointOrdering(0);
+    RT::PointOrdering<T,S> pointOrdering(0);
     points = sortPoints(points);
-    std::vector<RT::Point<T>> sortedPoints = {points[0]};
+    std::vector<RT::Point<T,S>> sortedPoints = {points[0]};
     int k = 0;
     for (int i = 1; i < points.size(); i++) {
         if (pointOrdering.equals(sortedPoints[k], points[i])) {
@@ -61,8 +61,8 @@ std::vector<RT::Point<T>> sortAndMerge(std::vector<RT::Point<T>> points) {
     return sortedPoints;
 }
 
-template <class T>
-void printPoints(std::vector<RT::Point<T>> points) {
+template <typename T, class S>
+void printPoints(std::vector<RT::Point<T,S>> points) {
     for (int i = 0; i < points.size(); i++) {
         points[i].print();
     }
@@ -71,15 +71,15 @@ void printPoints(std::vector<RT::Point<T>> points) {
 TEST(range_tree_count_test, returns_correct_for_one_dim)
 {
     std::vector<double> values = {1.0,1.0,2.0,2.0,3.0,3.0,3.0,4.0,4.0,5.0};
-    std::vector<RT::Point<int>> points = {};
+    std::vector<RT::Point<double,int>> points = {};
 
     auto f = [](double a) { std::vector<double> b = {a}; return b;};
     for (int i = 0; i < values.size(); i++) {
-        RT::Point<int> a(f(values[i]), 0);
+        RT::Point<double,int> a(f(values[i]), 0);
         points.push_back(a);
     }
 
-    RT::RangeTree<int> rtree(points);
+    RT::RangeTree<double,int> rtree(points);
 
     auto g = [](bool a) { std::vector<bool> b = {a}; return b;};
     EXPECT_EQ(rtree.countInRange(f(-12.0), f(30.0), g(true), g(true)), 10);
@@ -97,12 +97,12 @@ TEST(range_tree_return_points_test, returns_correct_for_one_dim)
     std::vector<int> counts = {1, 3, 4, 2, 1, 1};
     std::vector<double> sortedValues = {1.0, 2.0, 3.0, 5.0, 11.0};
     std::vector<int> sortedCounts = {3, 4, 1, 2, 2};
-    std::vector<RT::Point<int>> points = {};
-    std::vector<RT::Point<int>> sortedPoints = {};
+    std::vector<RT::Point<double,int>> points = {};
+    std::vector<RT::Point<double,int>> sortedPoints = {};
 
     auto f = [](double a) { std::vector<double> b = {a}; return b;};
     for (int i = 0; i < values.size(); i++) {
-        RT::Point<int> a(f(values[i]), 0);
+        RT::Point<double,int> a(f(values[i]), 0);
         a.increaseCountBy(counts[i] - 1);
         points.push_back(a);
     }
@@ -110,13 +110,13 @@ TEST(range_tree_return_points_test, returns_correct_for_one_dim)
     std::cout << "Sorted points:" << std::endl;
     auto temp = sortAndMerge(points);
     for (int i = 0; i < sortedValues.size(); i++) {
-        RT::Point<int> a(f(sortedValues[i]), 0);
+        RT::Point<double,int> a(f(sortedValues[i]), 0);
         a.increaseCountBy(sortedCounts[i] - 1);
         sortedPoints.push_back(a);
     }
     EXPECT_EQ(sortedPoints, sortAndMerge(points));
 
-    RT::RangeTree<int> rtree(points);
+    RT::RangeTree<double,int> rtree(points);
 
     auto g = [](bool a) { std::vector<bool> b = {a}; return b;};
     EXPECT_EQ(sortPoints(rtree.pointsInRange(f(-12.0), f(30.0), g(true), g(true))),
@@ -135,15 +135,15 @@ TEST(range_tree_count_test, returns_correct_for_two_dim)
 {
     std::vector<double> v1 = {3.0, 3.0, 3.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 1.0, 3.1};
     std::vector<double> v2 = {1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 3.2};
-    std::vector<RT::Point<int>> points = {};
+    std::vector<RT::Point<double,int>> points = {};
 
     auto f = [](double a, double b) { std::vector<double> c = {a, b}; return c;};
     for (int i = 0; i < v1.size(); i++) {
-        RT::Point<int> a(f(v1[i], v2[i]), 0);
+        RT::Point<double,int> a(f(v1[i], v2[i]), 0);
         points.push_back(a);
     }
 
-    RT::RangeTree<int> rtree(points);
+    RT::RangeTree<double,int> rtree(points);
 
     auto g = [](bool a, bool b) { std::vector<bool> c = {a, b}; return c;};
     // Selecting 2-dim regions with boundary
@@ -216,18 +216,18 @@ TEST(range_tree_count_test, returns_correct_for_two_dim)
 
 TEST(range_tree_return_points_test, returns_correct_for_two_dim)
 {
-    std::vector<RT::Point<int>> points = {};
+    std::vector<RT::Point<double,int>> points = {};
     auto f = [](double a, double b) { std::vector<double> c = {a, b}; return c;};
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            RT::Point<int> a(f(i, j), 0);
+            RT::Point<double,int> a(f(i, j), 0);
             points.push_back(a);
             points.push_back(a);
         }
     }
 
-    RT::RangeTree<int> rtree(points);
-    RT::NaiveRangeCounter<int> nrc(points);
+    RT::RangeTree<double,int> rtree(points);
+    RT::NaiveRangeCounter<double,int> nrc(points);
 
     auto g = [](bool a, bool b) { std::vector<bool> c = {a, b}; return c;};
     std::vector<std::vector<bool>> boolVectors = {};
@@ -268,11 +268,11 @@ TEST(range_tree_return_points_test, returns_correct_for_two_dim)
 TEST(range_tree_count_test, returns_correct_for_three_dim)
 {
     auto f = [](double a, double b, double c) { std::vector<double> d = {a, b, c}; return d;};
-    std::vector<RT::Point<int>> points = {};
+    std::vector<RT::Point<double,int>> points = {};
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 3; k++) {
-                RT::Point<int> a(f(i, j, k), 0);
+                RT::Point<double,int> a(f(i, j, k), 0);
                 points.push_back(a);
                 if (i == 1 && j == 1 && k == 1) {
                     points.push_back(a);
@@ -280,8 +280,8 @@ TEST(range_tree_count_test, returns_correct_for_three_dim)
             }
         }
     }
-    RT::RangeTree<int> rtree(points);
-    RT::NaiveRangeCounter<int> nrc(points);
+    RT::RangeTree<double,int> rtree(points);
+    RT::NaiveRangeCounter<double,int> nrc(points);
 
     auto g = [](bool a, bool b, bool c) { std::vector<bool> d = {a, b, c}; return d;};
     std::vector<std::vector<bool>> boolVectors = {};
@@ -330,11 +330,11 @@ TEST(range_tree_count_test, returns_correct_for_three_dim)
 TEST(range_tree_return_points_test, returns_correct_for_three_dim)
 {
     auto f = [](double a, double b, double c) { std::vector<double> d = {a, b, c}; return d;};
-    std::vector<RT::Point<int>> points = {};
+    std::vector<RT::Point<double,int>> points = {};
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 3; k++) {
-                RT::Point<int> a(f(i, j, k), 0);
+                RT::Point<double,int> a(f(i, j, k), 0);
                 points.push_back(a);
                 if (i == 1 && j == 1 && k == 1) {
                     points.push_back(a);
@@ -342,8 +342,8 @@ TEST(range_tree_return_points_test, returns_correct_for_three_dim)
             }
         }
     }
-    RT::RangeTree<int> rtree(points);
-    RT::NaiveRangeCounter<int> nrc(points);
+    RT::RangeTree<double,int> rtree(points);
+    RT::NaiveRangeCounter<double,int> nrc(points);
 
     auto g = [](bool a, bool b, bool c) { std::vector<bool> d = {a, b, c}; return d;};
     std::vector<std::vector<bool>> boolVectors = {};

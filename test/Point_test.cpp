@@ -32,7 +32,7 @@ TEST(point_test, has_input_values)
 {
     std::vector<double> vals = {1.0, 2.0, -1.0, 3.0};
 
-    RT::Point<int> p(vals, 5);
+    RT::Point<double, int> p(vals, 5);
 
     EXPECT_EQ(p.count(), 1);
     p.increaseCountBy(1);
@@ -54,20 +54,20 @@ TEST(point_test, has_input_values)
 
 TEST(point_test, compares_correctly)
 {
-    RT::PointOrdering<int> ptOrd0(0);
-    RT::PointOrdering<int> ptOrd1(1);
-    RT::PointOrdering<int> ptOrd2(2);
-    RT::PointOrdering<int> ptOrd12(12);
+    RT::PointOrdering<double,int> ptOrd0(0);
+    RT::PointOrdering<double,int> ptOrd1(1);
+    RT::PointOrdering<double,int> ptOrd2(2);
+    RT::PointOrdering<double,int> ptOrd12(12);
 
     std::vector<double> vals1 = {1.0, 4.0, -1.0, 4.0};
     std::vector<double> vals2 = {2.2, 3.3, -1.0, 3.0};
     std::vector<double> vals3 = {1.0, 2.0, -1.0, 3.0, 4.0};
 
-    RT::Point<int> p1(vals1, 5);
-    RT::Point<int> p1yes(vals1, 5);
-    RT::Point<int> p1no(vals1, 6);
-    RT::Point<int> p2(vals2, 2);
-    RT::Point<int> p3(vals3, 2);
+    RT::Point<double,int> p1(vals1, 5);
+    RT::Point<double,int> p1yes(vals1, 5);
+    RT::Point<double,int> p1no(vals1, 6);
+    RT::Point<double,int> p2(vals2, 2);
+    RT::Point<double,int> p3(vals3, 2);
 
     EXPECT_TRUE(p1 == p1yes);
     EXPECT_TRUE(ptOrd0.equals(p1, p1yes));
