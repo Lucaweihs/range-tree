@@ -25,8 +25,27 @@
 #include <vector>
 #include "gtest/gtest.h"
 #include "RangeTree.h"
+#include <random>
+#include <cmath>
 
 namespace RT = RangeTree;
+
+template <typename T>
+std::vector<T> abs(std::vector<T> vec) {
+    for (int i = 0; i < vec.size(); i++) {
+        vec[i] = std::abs(vec[i]);
+    }
+    return vec;
+}
+
+template <typename T>
+std::vector<T> add(const std::vector<T>& v0, const std::vector<T>& v1) {
+    std::vector<T> v;
+    for (int i = 0; i < v0.size(); i++) {
+        v.push_back(v0[i] + v1[i]);
+    }
+    return v;
+}
 
 template <typename T, class S>
 std::vector<RT::Point<T,S>> slice(std::vector<RT::Point<T,S>> points, int start, int end) {
@@ -214,15 +233,17 @@ TEST(range_tree_count_test, returns_correct_for_two_dim)
                                  g(true, true), g(true, false)), 0);
 }
 
-TEST(range_tree_return_points_test, returns_correct_for_two_dim)
+TEST(range_tree_return_points_test, returns_correct_for_three_dim_cube)
 {
-    std::vector<RT::Point<double,int>> points = {};
-    auto f = [](double a, double b) { std::vector<double> c = {a, b}; return c;};
+std::vector<RT::Point<double,int>> points = {};
+    auto f = [](double a, double b, double c) { std::vector<double> d = {a, b, c}; return d;};
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            RT::Point<double,int> a(f(i, j), 0);
-            points.push_back(a);
-            points.push_back(a);
+            for (int k = 0; k < 3; k++) {
+                RT::Point<double, int> a(f(i, j, k), 0);
+                points.push_back(a);
+                points.push_back(a);
+            }
         }
     }
 
@@ -233,10 +254,13 @@ TEST(range_tree_return_points_test, returns_correct_for_two_dim)
     std::vector<std::vector<bool>> boolVectors = {};
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 2; j++) {
-            std::vector<bool> a = {};
-            a.push_back(i == 1);
-            a.push_back(j == 1);
-            boolVectors.push_back(a);
+            for (int k = 0; k < 2; k++) {
+                std::vector<bool> a = {};
+                a.push_back(i == 1);
+                a.push_back(j == 1);
+                a.push_back(k == 1);
+                boolVectors.push_back(a);
+            }
         }
     }
 
@@ -386,5 +410,65 @@ TEST(range_tree_return_points_test, returns_correct_for_three_dim)
             EXPECT_EQ(sortAndMerge(nrc.pointsInRange(lower0d, upper0d, withLower, withUpper)),
                       sortPoints(rtree.pointsInRange(lower0d, upper0d, withLower, withUpper)));
         }
+    }
+}
+
+TEST(range_tree_return_points_test, returns_correct_for_high_dim)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::normal_distribution<> norm(0,1);
+    std::bernoulli_distribution bern(0.5);
+    std::binomial_distribution<> binom(10, 0.5);
+
+    int numPoints = 2000;
+    int dim = 4;
+    std::vector<RangeTree::Point<double,int> > normPoints;
+    std::vector<RangeTree::Point<int,int> > binomPoints;
+    for (int i = 0; i < numPoints; i++) {
+        std::vector<double> dPt;
+        std::vector<int> iPt;
+        for (int j = 0; j < dim; j++) {
+            dPt.push_back(norm(gen));
+            iPt.push_back(binom(gen));
+        }
+        normPoints.push_back(RangeTree::Point<double,int>(dPt, 0));
+        binomPoints.push_back(RangeTree::Point<int,int>(iPt, 0));
+    }
+    RangeTree::RangeTree<double,int> normRt(normPoints);
+    RangeTree::RangeTree<int,int> binomRt(binomPoints);
+
+    RangeTree::NaiveRangeCounter<double,int> normNrc(normPoints);
+    RangeTree::NaiveRangeCounter<int,int> binomNrc(binomPoints);
+
+    int numTrials = 1000;
+    std::uniform_int_distribution<> sampler(0, numPoints - 1);
+    for (int i = 0; i < numTrials; i++) {
+        std::vector<bool> withLower;
+        std::vector<bool> withUpper;
+
+        for (int j = 0; j < dim; j++) {
+            withLower.push_back(bern(gen) == 1);
+            withUpper.push_back(bern(gen) == 1);
+        }
+
+        int ind0 = sampler(gen);
+        int ind1 = sampler(gen);
+
+        std::vector<double> normLower = normPoints[ind0].asVector();
+        std::vector<double> normUpper = add(normLower, abs(normPoints[ind1].asVector()));
+
+        EXPECT_EQ(normRt.countInRange(normLower, normUpper, withLower, withUpper),
+                  normNrc.countInRange(normLower, normUpper, withLower, withUpper));
+        EXPECT_EQ(sortPoints(normRt.pointsInRange(normLower, normUpper, withLower, withUpper)),
+                  sortAndMerge(normNrc.pointsInRange(normLower, normUpper, withLower, withUpper)));
+
+        std::vector<int> binomLower = binomPoints[ind0].asVector();
+        std::vector<int> binomUpper = add(binomLower, abs(binomPoints[ind1].asVector()));
+        EXPECT_EQ(binomRt.countInRange(binomLower, binomUpper, withLower, withUpper),
+                  binomNrc.countInRange(binomLower, binomUpper, withLower, withUpper));
+        EXPECT_EQ(sortPoints(binomRt.pointsInRange(binomLower, binomUpper, withLower, withUpper)),
+                  sortAndMerge(binomNrc.pointsInRange(binomLower, binomUpper, withLower, withUpper)));
     }
 }
