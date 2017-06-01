@@ -93,8 +93,8 @@ TEST(range_tree_count_test, returns_correct_for_one_dim)
 
 TEST(range_tree_return_points_test, returns_correct_for_one_dim)
 {
-    std::vector<double> values = {3.0, 1.0, 2.0, 5.0, 11.0, 11.0};
-    std::vector<int> counts = {1, 3, 4, 2, 1, 1};
+    std::vector<double> values = {3.0, 1.0, 2.0, 11.0, 5.0, 11.0};
+    std::vector<int> counts = {1, 3, 4, 1, 2, 1};
     std::vector<double> sortedValues = {1.0, 2.0, 3.0, 5.0, 11.0};
     std::vector<int> sortedCounts = {3, 4, 1, 2, 2};
     std::vector<RT::Point<double,int>> points = {};
