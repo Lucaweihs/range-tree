@@ -43,6 +43,7 @@
 #include <type_traits>
 #include <deque>
 #include <cmath>
+#include <algorithm>
 
 namespace RangeTree {
 
